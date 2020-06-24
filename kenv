@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+kenv_env=$1
+kenv_sourcefile=${2:-./env.yaml}
+
+which yq 1>/dev/null || (echo "Installing yq..." && brew install python-yq) 
+which envsubst 1>/dev/null || (echo "Installing envsubst..." && brew install gettext && brew link --force gettext ) 
+
+if [ -f $kenv_sourcefile ]; then
+
+  eval $(cat $kenv_sourcefile | yq -r --arg kenv_env $kenv_env '.envs[$kenv_env] | to_entries[] | "export \(.key)=\(.value)"')
+  for f in $(cat $kenv_sourcefile | yq -r '.sources[]'); do
+    cat $f | envsubst
+    echo ""
+    echo "---"
+  done  
+
+else
+  echo "Could not find environment file $kenv_sourcefile"
+  exit 1
+fi
+
